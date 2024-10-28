@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: curso-url
+    labels:
+        app: curso-url
+    namespace: provider-web
+    annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
+        nginx.ingress.kubernetes.io/limits-rps: '6'
+spec:
+    ingressClassName: 'nginx'
+    rules:
+      - host: 'cursos.tuxcompany.com.br'
+        http:
+          paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                    name: curso-svc 
+                    port:
+                        number: 8080
+    tls:
+      - hosts: 
+          - "cursos.tuxcompany.com.br"
+        secretName: cursos-crt    

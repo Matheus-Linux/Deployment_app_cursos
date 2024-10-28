@@ -1,0 +1,35 @@
+apiVersion: v1
+data:
+  nginx.conf: "# Define o número de workers (ajuste conforme a CPU do servidor)\nworker_processes
+    auto;\n\n# Configurações de eventos\nevents {\n    worker_connections 1024; #
+    Número máximo de conexões por worker\n}\n\n# Configurações globais\nhttp {\n    include
+    \      mime.types;\n    default_type application/octet-stream;\n\n    # Configuração
+    de logs\n    log_format main '$remote_addr - $remote_user [$time_local] \"$request\"
+    '\n                    '$status $body_bytes_sent \"$http_referer\" '\n                    '\"$http_user_agent\"
+    \"$http_x_forwarded_for\"';\n    access_log /var/log/nginx/access.log main;\n
+    \   error_log /var/log/nginx/error.log;\n\n    # Configurações de timeout\n    client_header_timeout
+    60;\n    client_body_timeout 60;\n    send_timeout 60;\n\n    # Enable gzip compression\n
+    \   gzip on;\n    gzip_types text/plain text/css application/json application/javascript
+    text/xml application/xml application/xml+rss text/javascript;\n    gzip_min_length
+    1000; # Minimiza o tamanho para gzip\n    gzip_vary on;\n    gzip_proxied any;\n
+    \   gzip_disable \"msie6\";\n\n    # Configurações de caching\n    proxy_cache_path
+    /tmp/nginx_cache levels=1:2 keys_zone=my_cache:10m max_size=1g inactive=60m use_temp_path=off;\n
+    \   proxy_cache_key \"$scheme$request_method$host$request_uri\";\n    proxy_cache_use_stale
+    error timeout updating;\n    \n    # Configurações de headers\n    add_header
+    X-Content-Type-Options nosniff;\n    add_header X-XSS-Protection \"1; mode=block\";\n
+    \   add_header X-Frame-Options DENY;\n    add_header Referrer-Policy no-referrer;\n\n
+    \   # Configurações do servidor\n    server {\n        listen 80;\n        server_name
+    cursos.tuxcompany.com.br;\n\n\n        # Localização da aplicação\n        location
+    / {\n\t    index index.php index.html;\n            proxy_set_header Host $host;\n
+    \           proxy_set_header X-Real-IP $remote_addr;\n            proxy_set_header
+    X-Forwarded-For $proxy_add_x_forwarded_for;\n            proxy_set_header X-Forwarded-Proto
+    $scheme;\n\n            # Habilitar cache\n            proxy_cache my_cache;\n
+    \           proxy_cache_bypass $http_cache_control;\n            proxy_cache_valid
+    200 301 302 10m;\n            proxy_cache_valid 404 1m;\n            proxy_read_timeout
+    90;\n        }\n\n        # Configuração de logs\n        access_log /var/log/nginx/cursos_access.log;\n
+    \       error_log /var/log/nginx/cursos_error.log;\n    }\n}\n\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: nginx-template
+  namespace: provider-web

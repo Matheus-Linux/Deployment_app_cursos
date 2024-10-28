@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cursos-server
+  labels:
+    app: cursos-server
+  namespace: provider-web
+  annotations:
+    deploy_version: "v1"
+    image_base: "trafex/php-nginx"
+    maintainer: "Linux Team"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cursos-server
+  template:
+    metadata:
+      labels:
+        app: cursos-server
+      annotations:
+        deploy_version: "v1"
+        image_base: "trafex/php-nginx"
+        maintainer: "Linux Team"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: datacenter
+                  operator: In
+                  values:
+                    - BR-SP
+                    - BR-SC
+      hostname: srvapp
+      containers:
+        - image: 'trafex/php-nginx:3.6.0'
+          name: nginx-server
+          resources:
+            limits:
+              cpu: '0.1'
+              memory: '120Mi'
+            requests:
+              cpu: '0.05'
+              memory: '70Mi'
+          ports:
+            - name: http-port
+              containerPort: 8080
+            - name: https-port
+              containerPort: 443
+          resizePolicy:
+            - resourceName: cpu
+              restartPolicy: NotRequired
+            - resourceName: memory
+              restartPolicy: RestartContainer
+          lifecycle:
+            postStart:
+              exec:
+                command: ['/bin/sh','-c',"[[ -S /run/php-fpm.sock ]] && echo \"SOCKET FPM [OK]\" >> /var/log/inital.log  || echo \"ERRO\";"]
+            preStop:
+              exec:
+                command: ['/bin/sh','-c',"echo \"CONTAINER ENCERRADO!\" >> /var/log/inital.log"]
+          securityContext:
+            runAsNonRoot: false
+          workingDir: /var/www/html
+          env:
+            - name: USER_DB
+              value: 'db.cursos'
+              #valueFrom:
+              #  secretKeyRef:
+              #    name: cursos-access
+              #    key: user_db
+            - name: USER_PASS
+              value: '*db.@cursos*'
+              #valueFrom:
+              #  secretKeyRef:
+              #    name: cursos-access
+              #    key: user_pass
+            - name: DB_HOST
+              value: 'mysql-svc.database.svc.cluster.local' 
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /
+            initialDelaySeconds: 40
+            periodSeconds: 60
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            exec:
+              command:
+                - grep
+                - '192.168.56.251'
+                - /proc/mounts
+            initialDelaySeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 1
+            successThreshold: 1
+          volumeMounts:
+            - name: web-volume
+              mountPath: /var/www/html
+            - name: logs
+              mountPath: /var/logs/
+                #- name: web-config
+                #mountPath: /etc/nginx/nginx.conf 
+                #subPath: nginx.conf
+      volumes:
+        - name: web-volume
+          persistentVolumeClaim:
+            claimName: pvc-curso
+        - name: logs
+          persistentVolumeClaim:
+            claimName: pvc-logs
+              #- name: web-config
+              #configMap:
+              #name: nginx-template
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: curso-svc
+  labels:
+    app: curso-svc
+  namespace: provider-web
+spec:
+  type: ClusterIP
+  selector:
+    app: cursos-server
+  ports:
+    - name: http-port
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: https-port
+      port: 443
+      targetPort: 443
+      protocol: TCP
