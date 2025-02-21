@@ -48,7 +48,7 @@ spec:
               memory: '120Mi'
             requests:
               cpu: '0.05'
-              memory: '70Mi'
+              memory: '105Mi'
           ports:
             - name: http-port
               containerPort: 8080
