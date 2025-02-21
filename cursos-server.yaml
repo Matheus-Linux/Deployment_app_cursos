@@ -106,21 +106,10 @@ spec:
           volumeMounts:
             - name: web-volume
               mountPath: /var/www/html
-            - name: logs
-              mountPath: /var/logs/
-                #- name: web-config
-                #mountPath: /etc/nginx/nginx.conf 
-                #subPath: nginx.conf
       volumes:
         - name: web-volume
           persistentVolumeClaim:
             claimName: pvc-curso
-        - name: logs
-          persistentVolumeClaim:
-            claimName: pvc-logs
-              #- name: web-config
-              #configMap:
-              #name: nginx-template
 ---
 apiVersion: v1
 kind: Service
